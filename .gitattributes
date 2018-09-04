@@ -1,0 +1,5 @@
+* text=auto
+
+# Shell stuff that needs LF even on Windows
+*.sh eol=lf
+Makefile* eol=lf
