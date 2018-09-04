@@ -18,6 +18,54 @@
 #define MYNAME "ccache"
 #endif
 
+#if HAVE_COMPAR_FN_T
+#define COMPAR_FN_T __compar_fn_t
+#else
+typedef int(*COMPAR_FN_T)(const void *, const void *);
+#endif
+
+// Work with silly DOS binary open.
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
+// mkstemp() on some versions of cygwin don't handle binary files, so override.
+#ifdef __CYGWIN__
+#undef HAVE_MKSTEMP
+#endif
+
+#ifdef _WIN32
+char *win32argvtos(char *prefix, char **argv);
+char *win32getshell(char *path);
+int win32execute(char *path, char **argv, int doreturn,
+   int fd_stdout, int fd_stderr);
+void add_exe_ext_if_no_to_fullpath(char *full_path_win_ext, size_t max_size,
+   const char *ext, const char *path);
+#    ifndef _WIN32_WINNT
+#    define _WIN32_WINNT 0x0501
+#    endif
+#    include <windows.h>
+#    define mkdir(a,b) mkdir(a)
+#    define link(src,dst) (CreateHardLink(dst,src,NULL) ? 0 : -1)
+#    define lstat(a,b) stat(a,b)
+#    define execv(a,b) win32execute(a,b,0,-1,-1)
+#    define execute(a,b,c,d) win32execute(*(a),a,1,b,c)
+#    define DIR_DELIM_CH '\\'
+#    define PATH_DELIM ";"
+#    define F_RDLCK 0
+#    define F_WRLCK 0
+#else
+#    define DIR_DELIM_CH '/'
+#    define PATH_DELIM ":"
+#endif
+
+#ifndef MAX
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
 extern const char CCACHE_VERSION[];
 
 // Statistics fields in storage order.
@@ -240,7 +288,10 @@ void wipe_all(struct conf *conf);
 // ----------------------------------------------------------------------------
 // execute.c
 
-int execute(char **argv, int fd_out, int fd_err, pid_t *pid);
+#if !defined(execute)
+   int execute(char **argv, int fd_out, int fd_err, pid_t *pid);
+#endif
+
 char *find_executable(const char *name, const char *exclude_name);
 void print_command(FILE *fp, char **argv);
 
@@ -261,55 +312,5 @@ bool cc_process_args(struct args *args, struct args **preprocessor_args,
                     struct args **compiler_args);
 void cc_reset(void);
 bool is_precompiled_header(const char *path);
-
-// ----------------------------------------------------------------------------
-
-#if HAVE_COMPAR_FN_T
-#define COMPAR_FN_T __compar_fn_t
-#else
-typedef int (*COMPAR_FN_T)(const void *, const void *);
-#endif
-
-// Work with silly DOS binary open.
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-
-// mkstemp() on some versions of cygwin don't handle binary files, so override.
-#ifdef __CYGWIN__
-#undef HAVE_MKSTEMP
-#endif
-
-#ifdef _WIN32
-char *win32argvtos(char *prefix, char **argv);
-char *win32getshell(char *path);
-int win32execute(char *path, char **argv, int doreturn,
-                 int fd_stdout, int fd_stderr);
-void add_exe_ext_if_no_to_fullpath(char *full_path_win_ext, size_t max_size,
-                                   const char *ext, const char *path);
-#    ifndef _WIN32_WINNT
-#    define _WIN32_WINNT 0x0501
-#    endif
-#    include <windows.h>
-#    define mkdir(a,b) mkdir(a)
-#    define link(src,dst) (CreateHardLink(dst,src,NULL) ? 0 : -1)
-#    define lstat(a,b) stat(a,b)
-#    define execv(a,b) win32execute(a,b,0,-1,-1)
-#    define execute(a,b,c,d) win32execute(*(a),a,1,b,c)
-#    define DIR_DELIM_CH '\\'
-#    define PATH_DELIM ";"
-#    define F_RDLCK 0
-#    define F_WRLCK 0
-#else
-#    define DIR_DELIM_CH '/'
-#    define PATH_DELIM ":"
-#endif
-
-#ifndef MAX
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-#ifndef MIN
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
 
 #endif // ifndef CCACHE_H

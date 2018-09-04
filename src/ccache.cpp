@@ -455,6 +455,7 @@ clean_up_internal_tempdir(void)
 
 	update_mtime(conf->cache_dir);
 
+#if defined(HAVE_DIRENT_H)
 	DIR *dir = opendir(temp_dir());
 	if (!dir) {
 		return;
@@ -474,6 +475,9 @@ clean_up_internal_tempdir(void)
 	}
 
 	closedir(dir);
+#elif defined(HAVE_WINDOWS_H)
+
+#endif
 }
 
 static enum guessed_compiler
